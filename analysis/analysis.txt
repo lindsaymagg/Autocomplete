@@ -1,0 +1,140 @@
+Lindsay Maggioncalda
+lnm22
+
+(1) Run the program BenchmarkForAutocomplete and copy/paste the 
+results here this for #matches = 20
+
+search	size	#match	binary	brute
+	    456976	20	    0.2242	0.0169
+a	    17576	20	    0.0047	0.0269
+b	    17576	20	    0.0038	0.0072
+c	    17576	20	    0.0043	0.0074
+x	    17576	20	    0.0048	0.0070
+y	    17576	20	    0.0052	0.0074
+z	    17576	20	    0.0063	0.0079
+aa	    676	    20	    0.0001	0.0077
+az	    676	    20	    0.0001	0.0075
+za	    676	    20	    0.0001	0.0069
+zz	    676	    20	    0.0001	0.0087
+
+
+(2) Run the program again for #matches = 10000, paste the results, 
+and then make any conclusions about how the # matches 
+affects the runtime. 
+
+search	size	#match	binary	brute
+	    456976	10000	0.2239	0.0345
+a	    17576	10000	0.0051	0.0175
+b	    17576	10000	0.0035	0.0107
+c	    17576	10000	0.0036	0.0118
+x	    17576	10000	0.0047	0.0099
+y	    17576	10000	0.0085	0.0099
+z	    17576	10000	0.0049	0.0102
+aa	    676	    10000	0.0001	0.0080
+az	    676	    10000	0.0001	0.0068
+za	    676	    10000	0.0001	0.0077
+zz	    676	    10000	0.0001	0.0063
+
+As the number of matches goes up, runtimes for BruteAutocomplete go up, especially when size is large.
+Runtimes for BinaryAutocomplete do not seem to significantly increase as # matches increases.
+
+
+(3) Copy/paste the code from BruteAutocomplete.topMatches below. 
+Explain what the Big-Oh complexity of the entire loop: 
+for(Term t : myTerms) {...} is in terms of N, the number of elements in myTerms and 
+M, the number of terms that match the prefix. 
+Assume that every priority-queue operation runs in O(log k) time. 
+Explain your answer which should be in terms of N, M, and k.
+
+	public List<Term> topMatches(String prefix, int k) {
+		if (k < 0) {
+			throw new IllegalArgumentException("Illegal value of k:" + k);
+		}
+		
+		// maintain priority queue pq of size k
+		PriorityQueue<Term> pq = new PriorityQueue<Term>(10, new Term.WeightOrder());
+		
+		for (Term t : myTerms) {						 	 		 //O(N) will run N times where N is num of terms in myTerms
+			if (!t.getWord().startsWith(prefix))			  		 //O(i) i = length of prefix. Will almost always be really small, so effect on runtime is negligible
+				continue; 											 //O(N-M): only executes when Term t is not a match
+				//go to next iteration of loop, skip next steps
+																	 //O(M): the following lines are executed only when Term t is a match, so they execute M times
+			if (pq.size() < k) {							  		 //O(log k) "Assume that every priority-queue operation runs in O(log k) time" 
+				pq.add(t);								 			 //O(log k) "Assume that every priority-queue operation runs in O(log k) time"  
+			} else if (pq.peek().getWeight() < t.getWeight()) {		 //O(log k) "Assume that every priority-queue operation runs in O(log k) time" 
+				pq.remove();										 //O(log k) "Assume that every priority-queue operation runs in O(log k) time" 
+				pq.add(t);											 //O(log k) "Assume that every priority-queue operation runs in O(log k) time" 
+			}
+		}
+		int numResults = Math.min(k, pq.size());
+		LinkedList<Term> ret = new LinkedList<>();
+		for (int i = 0; i < numResults; i++) {
+			ret.addFirst(pq.remove());
+		}
+		return ret;
+	}
+
+Runtime complexity of the for(Term t : myTerms) {...} loop is O(N) + O(log k), because we drop constants.
+The loop will run N times. But what will execute instead the loop varies based on whether or not Term t is a match.
+The line "continue;" runs O(N-M) times, everytime Term t is not a match; or N times (since N is larger than M). --> O(N).
+The priority queue is only altered when Term t is a match, and then all of the O(log k) lines run M times --> O(M log k).
+Thus overall, the runtime for the loop is O(N + M log k).
+
+
+(4) Explain why the last for loop in BruteAutocomplete.topMatches 
+uses a LinkedList (and not an ArrayList) 
+AND why the PriorityQueue uses Term.WeightOrder to get 
+the top k heaviest matches -- rather than 
+using Term.ReverseWeightOrder.
+
+The last for loop uses a LinkedList because it is more efficient. Insertion to the front of a LinkedList 
+is an O(1) operation, because the only thing that changes is the pointer to first. No elements need to shift.
+In an ArrayList, when we add something to the beginning of the ArrayList, all of the other elements need to shift over,
+so an insertion is O(N) for ArrayLists. Thus a LinkedList is used because it is more efficient.
+Term.WeightOrder is used because we are removing elements from the Priority Queue, which is in ascending order according to weight,
+to the front of the LinkedLists. As we remove the "weightiest" elements from the priority queue and put them in the front of the LinkedList,
+we end up with a LinkedList that is in reverse weight order.
+
+
+(5) Explain what the runtime of the 
+BinarySearchAutocomplete.topMatches code that you 
+implemented is by copy/pasting the code below 
+and explaining your answer in terms of N, M, and k.
+
+public List<Term> topMatches(String prefix, int k) {
+		if (prefix == null) throw new NullPointerException();				//O(1)
+		ArrayList<Term> list = new ArrayList<>();							//O(1)
+		Term termy = new Term(prefix, 0);									//O(1)
+		
+		if (k == 0) return list;											//O(1)
+		
+		//find matches with same prefix										//O(1)
+		
+		Comparator<Term> comp = new Term.PrefixOrder(prefix.length());		//O(1)
+		int indexFirst = firstIndexOf(myTerms, termy, comp); 				//O(log N) binary search
+		int indexLast = lastIndexOf(myTerms, termy, comp);   				//O(log N) binary search
+		if (indexFirst != -1 && indexLast != -1) {			 				//O(1)
+			while (indexFirst != indexLast) {				 				//O(M) #loops depends on how many matches there are (M)
+				list.add(myTerms[indexFirst]);				 				//O(1) because we're adding to the end; no shifting happens
+				indexFirst += 1;							 				//O(1)
+			}
+		}
+		if (indexFirst == indexLast && indexFirst != -1) {   				//O(1)
+			list.add(myTerms[indexFirst]);					 				//O(1)
+		}
+		
+		//sort matches by reverse weight
+		
+		Collections.sort(list, new Term.ReverseWeightOrder());				//O(M log M) sort all M matches that match prefix
+		if (list.size() > k) return list.subList(0, k);						//O(k) return list of top k matches
+		return list;														//O(1)
+	}
+
+Overall, the runtime complexity (before simplification): O(1) + O(2log N) + O(M) + O(M log M) + O(k)
+Can drop O(1) because doesn't affect results
+O(2log N) becomes O(log N) because we drop constants
+Can drop O(M) because O(M) is trumped by O(M log M)
+Could probably drop O(k) since k will probably always be small, but we will keep it in for completion
+
+--> The final runtime complexity is O(log N + Mlog M + k)
+
